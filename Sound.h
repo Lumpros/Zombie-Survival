@@ -47,6 +47,7 @@ namespace PZS
 		~SFX(void) noexcept;
 
 		bool LoadFromFile(const char* sfx_path) noexcept;
+		Mix_Chunk* GetChunk(void) noexcept { return m_Chunk; }
 
 		void Play(void);
 	};

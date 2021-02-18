@@ -5,22 +5,6 @@
 #include <thread>
 #include <chrono>
 
-vector<unique_ptr<PZS::Barrier>> PZS::g_barriers;
-
-/* Unused */
-float Quake3InverseRoot(float x) 
-{
-	float xhalf = 0.5f * x;
-	int i = *(int*)&x;     
-
-	i = 0x5f3759df - (i >> 1);    
-
-	x = *(float*)&i;              
-	x = x * (1.5f - xhalf * x * x);
-
-	return x;
-}
-
 void ThreadCallSpawnZombie(int wave, volatile bool* is_paused)
 {
 	std::this_thread::sleep_for(std::chrono::seconds(3));
@@ -42,19 +26,25 @@ void ThreadCallSpawnZombie(int wave, volatile bool* is_paused)
 	}
 }
 
-void ThreadCallShowWaveText(SDL_Texture* text_texture, bool *is_visible)
+void ThreadCallShowWaveText(SDL_Texture* text_texture, bool *is_visible, volatile bool* is_paused)
 {	
 	for (Uint8 alpha = 0; alpha < 255; alpha += 5) {
 		SDL_SetTextureAlphaMod(text_texture, alpha);
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+		while (*is_paused);
 	}
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	do {
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+	} while ((*is_paused));
 
 	/* Careful with the unsigned */
 	for (Uint8 alpha = 255; alpha > 0; alpha -= 5) {
 		SDL_SetTextureAlphaMod(text_texture, alpha);
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+		while (*is_paused);
 	}
 
 	*is_visible = false;
@@ -67,6 +57,9 @@ int PZS::Stage::GetZombieLimit(void) const noexcept
 
 void PZS::Stage::ShowMouseTarget(void) noexcept
 {
+	if (is_paused || Player::Get()->GetHP() <= 0)
+		return;
+
 	/* Render target on mouse */
 	SDL_Point mouse;
 	Vector2D target_dimension{ 20, 20 };
@@ -84,10 +77,6 @@ void PZS::Stage::DisplayGameplayRelated(void) noexcept
 {
 	background_texture->Render({ 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT });
 
-	/* Barriers */
-	for (size_t i = 0; i < g_barriers.size(); ++i)
-		g_barriers[i]->Render();
-
 	/* Drops */
 	for (size_t i = 0; i < g_drops.size(); ++i)
 		g_drops[i]->Render();
@@ -98,6 +87,14 @@ void PZS::Stage::DisplayGameplayRelated(void) noexcept
 	/* Zombies */
 	for (size_t i = 0; i < g_zombies.size(); ++i)
 		g_zombies[i]->Render();
+}
+
+void PZS::Stage::ShowGameOverScreen(void) noexcept
+{
+	DrawAlphaScreen();
+
+	game_over_text->Render(WINDOW_WIDTH / 2 - game_over_text->GetWidth() / 2, 250);
+	main_menu_button->Render();
 }
 
 void PZS::Stage::DoNextStage(void) noexcept
@@ -116,37 +113,87 @@ void PZS::Stage::DoNextStage(void) noexcept
 
 	wave_text.reset(text_ptr);
 
-	std::thread show_wave_thread(ThreadCallShowWaveText, text_ptr->GetGeneratedTexture(), &wave_is_visible);
+	std::thread show_wave_thread(ThreadCallShowWaveText, text_ptr->GetGeneratedTexture(), &wave_is_visible, &is_paused);
 	std::thread spawn_zombie_thread(ThreadCallSpawnZombie, wave, &is_paused);
 
 	show_wave_thread.detach();
 	spawn_zombie_thread.detach();
 }
 
+void PZS::Stage::DrawAlphaScreen(void) noexcept
+{
+	SDL_Renderer* pRenderer = Renderer::GetInstance()->mRenderer;
+
+	constexpr SDL_Rect screen_rect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+
+	SDL_SetRenderDrawBlendMode(pRenderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(pRenderer, 0x00, 0x00, 0x00, 128);
+
+	SDL_RenderFillRect(pRenderer, &screen_rect);
+
+	SDL_SetRenderDrawBlendMode(pRenderer, SDL_BLENDMODE_NONE);
+}
+
+void PZS::Stage::DrawPauseMenu(void) noexcept
+{
+	DrawAlphaScreen();
+	pause_text->Render(
+		WINDOW_WIDTH / 2 - pause_text->GetWidth() / 2,
+		WINDOW_HEIGHT / 2 - pause_text->GetHeight() / 2
+		);
+
+	sound_button.Render();
+
+	audio_slider->Render();
+	
+}
+
 void PZS::Stage::UpdateGameplayRelated(void) noexcept
 {
-	if (zombies_left <= 0)
-		DoNextStage();
+	if (Player::Get()->GetHP() <= 0)
+		return;
 
-	/* Zombie */
-	for (size_t i = 0; i < g_zombies.size(); ++i)
+	const Uint8* keyboard_state = SDL_GetKeyboardState(NULL);
+
+	if (keyboard_state[SDL_SCANCODE_P] && !p_is_pressed) 
 	{
-		g_zombies[i]->Update();
-		if (g_zombies[i]->IsDead())
-			g_zombies.erase(g_zombies.begin() + (i--));
+		p_is_pressed = true;
+		is_paused = !is_paused;
+		audio_slider->Enable(false);
+		SDL_ShowCursor(is_paused);
+
+		for (size_t i = 0; i < g_drops.size(); ++i)
+			g_drops[i]->set_timer_for_pause();
 	}
 
-	/* Drops */
-	for (size_t i = 0; i < g_drops.size(); ++i)
-		g_drops[i]->Update();
+	else if (!keyboard_state[SDL_SCANCODE_P])
+		p_is_pressed = false;
 
-	/* Player */
-	Player::Get()->Update();
+	if (!is_paused)
+	{
+		if (zombies_left <= 0)
+			DoNextStage();
+
+		/* Zombie */
+		for (size_t i = 0; i < g_zombies.size(); ++i)
+		{
+			g_zombies[i]->Update();
+			if (g_zombies[i]->IsDead())
+				g_zombies.erase(g_zombies.begin() + (i--));
+		}
+
+		/* Drops */
+		for (size_t i = 0; i < g_drops.size(); ++i)
+			g_drops[i]->Update();
+
+		/* Player */
+		Player::Get()->Update();
+	}
 }
 
 void PZS::Stage::Render(void) noexcept
 {
-	DisplayGameplayRelated();
+ 	DisplayGameplayRelated();
 
 	DisplayUI();
 
@@ -157,17 +204,41 @@ void PZS::Stage::UpdateUI(void) noexcept
 {
 	Player* player_ptr = Player::Get();
 
-	HandleHealthCount(player_ptr);
-	HandleAmmoCount(player_ptr);
-	HandleZombieCount();
+	if (!is_paused)
+	{
+		HandleHealthCount(player_ptr);
+		HandleAmmoCount(player_ptr);
+		HandleZombieCount();
 
-	/* Gun boxes */
-	rifle_box.Update();
-	shotgun_box.Update();
-	pistol_box.Update();
+		/* Gun boxes */
+		rifle_box.Update();
+		shotgun_box.Update();
+		pistol_box.Update();
 
-	/* Arrow */
-	arrow.Update();
+		/* Arrow */
+		arrow.Update();
+	}
+
+	
+	else {
+		sound_button.Update();
+
+		if (sound_button.IsClicked()) {
+			slider_shown = !slider_shown;
+			audio_slider->Enable(slider_shown);
+		}
+
+		audio_slider->Update();
+	}
+
+	if (Player::Get()->GetHP() <= 0)
+	{
+		main_menu_button->Update();
+
+		if (main_menu_button->IsClicked()) {
+			g_game_state = GameState::GS_MENU;
+		}
+	}
 }
 
 void PZS::Stage::DisplayUI(void) noexcept
@@ -180,9 +251,9 @@ void PZS::Stage::DisplayUI(void) noexcept
 	/* Arrow above boxes*/
 	arrow.Render();
 
-	health_text.Render(340, 690);
-	ammo_text.Render(340, 720);
-	zombies_left_text.Render(400 - zombies_left_text.GetWidth() / 2, 20);
+	health_text->Render(340, 690);
+	ammo_text->Render(340, 720);
+	zombies_left_text->Render(400 - zombies_left_text->GetWidth() / 2, 20);
 	
 	if (wave_is_visible) 
 	{ 
@@ -191,6 +262,12 @@ void PZS::Stage::DisplayUI(void) noexcept
 			WINDOW_HEIGHT / 2 - wave_text->GetHeight() / 2
 		);
 	}
+
+	if (is_paused)
+		DrawPauseMenu();
+
+	if (Player::Get()->GetHP() <= 0)
+		ShowGameOverScreen();
 }
 
 void PZS::Stage::HandleHealthCount(Player* player_ptr) noexcept
@@ -204,7 +281,7 @@ void PZS::Stage::HandleHealthCount(Player* player_ptr) noexcept
 		char buf[20];
 		sprintf_s(buf, 20, "Health: %d/100", player_hp);
 
-		health_text.SetText(buf);
+		health_text->SetText(buf);
 	}
 }
 
@@ -225,7 +302,7 @@ void PZS::Stage::HandleAmmoCount(Player* player_ptr) noexcept
 		char buf[20];
 		sprintf_s(buf, 20, "Ammo: %d/%d", loaded_ammo, ammo_cap);
 
-		ammo_text.SetText(buf);
+		ammo_text->SetText(buf);
 	}
 }
 
@@ -233,10 +310,11 @@ void PZS::Stage::HandleZombieCount(void) noexcept
 {
 	if (old_zombie_count != zombies_left) {
 		old_zombie_count = zombies_left;
+
 		/* Update text */
 		char buf[25];
 		sprintf_s(buf, 25, "%d ZOMBIE%s LEFT", zombies_left, (zombies_left == 1 ? "" : "S"));
-		zombies_left_text.SetText(buf);
+		zombies_left_text->SetText(buf);
 	}
 }
 
@@ -303,32 +381,66 @@ void PZS::Stage::SpawnZombie(void) noexcept
 	g_zombies.push_back(std::make_unique<Zombie>(SDL_Rect({ zombie_position.x, zombie_position.y, ZOMBIE_WIDTH, ZOMBIE_HEIGHT })));
 }
 
-/* Constructors... FML */
-PZS::Stage::Stage(void) noexcept :
-	health_text(Resources::GetInstance()->gFonts.Get("font"), "Health: 100/100", { 0xFF, 0xFF, 0xFF, 0xFF }),
-
-	zombies_left_text(Resources::GetInstance()->gFonts.Get("zombie_font"), "L", { 0xFF, 0xFF, 0x00, 0xFF }),
-
-	ammo_text(Resources::GetInstance()->gFonts.Get("font"), "Ammo: 6/6", { 0xFF, 0xFF, 0xFF, 0xFF }),
-
-	rifle_box(RIFLE, { 120, WINDOW_HEIGHT - 110, 100, 100 }),
-
-	shotgun_box(SHOTGUN, { 230, WINDOW_HEIGHT - 110, 100, 100 }),
-
-	pistol_box(PISTOL, { 10, WINDOW_HEIGHT - 110, 100, 100 })
+void PZS::Stage::InitializeTextPointers(Resources* resources) noexcept
 {
-	background_texture = Resources::GetInstance()->gTextures.Get("debug");
-	target_texture = Resources::GetInstance()->gTextures.Get("target");
+	ammo_text = new Text(resources->gFonts.Get("font"), "Ammo: 6/6", { 0xFF, 0xFF, 0xFF, 0xFF });
+	health_text = new Text(resources->gFonts.Get("font"), "Health: 100/100", { 0xFF, 0xFF, 0xFF, 0xFF });
+	zombies_left_text = new Text(resources->gFonts.Get("zombie_font"), ".", { 0xFF, 0xFF, 0x00, 0xFF });
+	pause_text = new Text(resources->gFonts.Get("zombie_font_2"), "PAUSED", { 0xFF, 0xFF, 0xFF, 0xFF });
+	game_over_text = new Text(resources->gFonts.Get("zombie_font_2"), "GAME OVER", { 0xFF, 0x00, 0x00, 0xFF });
 
 	char buf[25];
 	sprintf_s(buf, 25, "%d ZOMBIES LEFT", zombies_left);
-	zombies_left_text.SetText(buf);
+	zombies_left_text->SetText(buf);
+}
 
-	/* Empty vectors and shit */
-	g_barriers.clear();
+PZS::Stage::Stage(void) noexcept :
+	rifle_box(RIFLE, { 120, WINDOW_HEIGHT - 110, 100, 100 }),
+	shotgun_box(SHOTGUN, { 230, WINDOW_HEIGHT - 110, 100, 100 }),
+	pistol_box(PISTOL, { 10, WINDOW_HEIGHT - 110, 100, 100 }),
+	sound_button({ 456, 0, 64, 64 }, { 758, 758, 32, 32 }, 1.0f, false)
+{
+	Resources* resources = Resources::GetInstance();
+
+	background_texture = resources->gTextures.Get("debug");
+	target_texture = resources->gTextures.Get("target");
+
+	main_menu_button = std::make_unique<Button>(SDL_Rect { 0, 256, 456, 128 }, SDL_Rect { 400 - 152, 350, 304, 85 }, 1.05f, true);
+
+	sound_button.Init();
+	main_menu_button->Init();
+
+	InitializeTextPointers(resources);
+}
+
+void PZS::Stage::Reset(void) noexcept
+{
+	if (ammo_text != nullptr) {
+		DeleteText();
+		InitializeTextPointers(Resources::GetInstance());
+	}
+
+	Player::Get()->Reset();
+
+	is_paused = false;
+	p_is_pressed = false;
+
+	slider_shown = false;
+	wave_is_visible = false;
+
+	wave = 0;
+	zombies_left = 0;
+
+	old_hp = 100;
+	old_cap = 6;
+	old_ammo = 6;
+	old_zombie_count = 0;
+
 	g_drops.clear();
 	g_player_bullets.clear();
 	g_zombies.clear();
+
+	audio_slider->Enable(false);
 }
 
 

@@ -19,6 +19,7 @@
 #define BULLET_SIZE 8
 
 #define DEBUG
+#undef DEBUG
 
 #ifdef DEBUG
 #define Logger puts

@@ -3,10 +3,12 @@
 #include <vector>
 #include <SDL.h>
 
+#include "AudioSlider.h"
 #include "Texture.h"
 #include "Resources.h"
 #include "Entity.h"
 #include "Player.h"
+#include "Menu.h"
 
 namespace PZS
 {
@@ -62,8 +64,14 @@ namespace PZS
 
 		BoxArrow arrow;
 
-		Text health_text, ammo_text;
-		Text zombies_left_text;
+		Button sound_button;
+		std::unique_ptr<Button> main_menu_button;
+
+		AudioSlider* audio_slider = nullptr;
+
+		Text* health_text,*ammo_text;
+		Text* zombies_left_text, *game_over_text;
+		Text* pause_text;
 
 		/* some optimizations */
 		int old_hp = 100;
@@ -72,11 +80,13 @@ namespace PZS
 		int old_zombie_count = 0;
 
 		volatile bool is_paused = false;
+		bool p_is_pressed = false;
 
 		/* Gameplay related*/
 		int wave = 0;
 		int zombies_left = 0;
 
+		bool slider_shown = false;
 		bool wave_is_visible = false;
 
 	private:
@@ -89,9 +99,22 @@ namespace PZS
 		void HandleAmmoCount(Player*) noexcept;
 		void HandleHealthCount(Player*) noexcept;
 		void DoNextStage(void) noexcept;
-
+	
+		void DrawAlphaScreen(void) noexcept;
+		void DrawPauseMenu(void) noexcept;
 		void DisplayUI(void) noexcept;
 		void UpdateUI(void) noexcept;
+		void ShowGameOverScreen(void) noexcept;
+
+		void DeleteText(void) noexcept {
+			delete pause_text;
+			delete health_text;
+			delete ammo_text;
+			delete zombies_left_text;
+			delete game_over_text;
+		}
+
+		void InitializeTextPointers(Resources* resourccs) noexcept;
 
 		int CalculateZombieSpawnNumber(int wave) const noexcept;
 
@@ -105,14 +128,23 @@ namespace PZS
 		void Update(void) noexcept;
 		void Render(void) noexcept;
 
+		void Reset(void) noexcept;
+
 		void SpawnZombie(void) noexcept;
 		int GetZombieLimit(void) const noexcept;
+
+		void RegisterAudioSlider(AudioSlider* slider) { audio_slider = slider; }
+		bool AudioSliderIsRegistered(void) const noexcept { return audio_slider != nullptr; }
 
 		Stage(void) noexcept;
 
 		static Stage* Get(void) noexcept {
 			static Stage instance;
 			return &instance;
+		}
+
+		~Stage(void) noexcept {
+			DeleteText();
 		}
 	};
 }

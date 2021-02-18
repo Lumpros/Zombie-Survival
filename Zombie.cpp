@@ -267,9 +267,6 @@ void PZS::Zombie::Update(void) noexcept
 		if (can_move)
 			HandleMovement();
 
-		for (size_t i = 0; i < g_barriers.size(); ++i)
-			HandleCollisionWithBarrier(g_barriers[i]->hitbox);
-
 		for (size_t i = 0; i < g_zombies.size(); ++i)
 		{
 			if (g_zombies[i]->GetHP() > 0)

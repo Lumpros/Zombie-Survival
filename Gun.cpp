@@ -73,16 +73,24 @@ void PZS::Gun::Update(int x, int y) noexcept
 	/* If left mouse button is clicked and etc */
 	if ((mouse_state & SDL_BUTTON_LMASK) && time_passed_milliseconds > fire_rate_milliseconds && ammo > 0)
 	{
-		/* Shoot bullet starting from the players center */
-		/* Using GetWidth() and GetHeight() because the hitbox changes when changing weapons */
-		Vector2D player_point = { x + player->GetWidth() / 2 - BULLET_SIZE / 2, y + player->GetHeight() / 2 - BULLET_SIZE / 2 };
-		Vector2D mouse_point  = { mouse_position.x - BULLET_SIZE / 2, mouse_position.y - BULLET_SIZE / 2 };
+		if ((!mouse_is_clicked && !hold_to_shoot) || hold_to_shoot)
+		{
+			mouse_is_clicked = true;
 
-		Shoot(player_point, mouse_point);
+			/* Shoot bullet starting from the players center */
+			/* Using GetWidth() and GetHeight() because the hitbox changes when changing weapons */
+			Vector2D player_point = { x + player->GetWidth() / 2 - BULLET_SIZE / 2, y + player->GetHeight() / 2 - BULLET_SIZE / 2 };
+			Vector2D mouse_point = { mouse_position.x - BULLET_SIZE / 2, mouse_position.y - BULLET_SIZE / 2 };
 
-		/* Reset timer */
-		time_passed_milliseconds = 0;
+			Shoot(player_point, mouse_point);
+
+			/* Reset timer */
+			time_passed_milliseconds = 0;
+		}
 	}
+
+	else if (!(mouse_state & SDL_BUTTON_LMASK))
+		mouse_is_clicked = false;
 
 	UpdateIndividualBullet();
 

@@ -31,6 +31,8 @@ namespace PZS
     public:
         explicit Drop(SDL_Rect rect) noexcept;
 
+        void set_timer_for_pause(void);
+
         void Update(void) noexcept override;
         void Render(void) noexcept override;
     };

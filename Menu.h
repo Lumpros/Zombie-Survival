@@ -2,6 +2,7 @@
 
 #include "Texture.h"
 #include "Sound.h"
+#include "AudioSlider.h"
 
 #include <ctime>
 
@@ -57,12 +58,15 @@ namespace PZS
 
 		bool show_controls = false;
 		bool going_up = false;
+		bool show_slider = false;
 
 		Button play_button;
 		Button controls_button;
+		Button sound_button;
 
 	public:
 		Music* menu_music;
+		AudioSlider* slider;
 
 		void Init(void) noexcept;
 
@@ -70,5 +74,9 @@ namespace PZS
 
 		void Update(void) noexcept;
 		void Render(void) noexcept;
+
+		~Menu(void) noexcept {
+			delete slider;
+		}
 	};
 }

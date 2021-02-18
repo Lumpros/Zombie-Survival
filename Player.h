@@ -53,8 +53,10 @@ namespace PZS
         int health = 100;
 
         // This is inconsistent because it can stab a zombie multiple times per frame but im too lazy to fix it lol
-        int meelee_damage = 40; 
+        int meelee_damage = 50; 
         int movement_speed = 3;
+
+        double rotation_angle = 0.0f;
 
         GunIndex gun_index = PISTOL;
 
@@ -95,6 +97,8 @@ namespace PZS
         void DoReloadAnimation(void) noexcept;
 
         int NODISCARD GetHP(void) const noexcept { return health; }
+
+        void Reset(void) noexcept;
 
         /* Weapon related functions */
         Gun* GetGun(GunIndex index) const noexcept { return guns[index].get(); }

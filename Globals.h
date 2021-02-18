@@ -23,8 +23,8 @@ namespace PZS
 	};
 
 	extern GameState g_game_state;
+
 	extern vector<unique_ptr<Bullet>>  g_player_bullets;;
-	extern vector<unique_ptr<Barrier>> g_barriers;
 	extern vector<unique_ptr<Zombie>>  g_zombies;
 	extern vector<unique_ptr<Drop>>    g_drops;
 }

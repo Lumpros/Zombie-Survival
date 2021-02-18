@@ -17,6 +17,11 @@ namespace PZS
 		std::unordered_map<std::string, std::unique_ptr<Resource>> resources;
 
 	public:
+		const std::unordered_map<std::string, std::unique_ptr<Resource>>* GetContainerCopy(void) const noexcept
+		{
+			return &resources;
+		}
+
 		void Add(const std::string& name, Resource* resource) noexcept
 		{
 			if (resources.find(name) == resources.end())
@@ -55,6 +60,7 @@ namespace PZS
 
 		static Resources* GetInstance(void) noexcept;
 
+		void SetMixChunkVolume(int volume) noexcept;
 		void Destroy(void) noexcept;
 
 	public:

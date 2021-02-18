@@ -26,11 +26,6 @@ void PZS::Bullet::Update(void) noexcept
 		hitbox.x = static_cast<int>(pos_x);
 		hitbox.y = static_cast<int>(pos_y);
 
-		/* Check if the bullet has hit any barriers. If it has, destroy it (animation) */
-		for (size_t i = 0; i < g_barriers.size() && active; ++i)
-			if (SDL_HasIntersection(&hitbox, &g_barriers[i]->hitbox))
-				destroyed = true;
-
 		/* Check if it has hit any zombie. If it has, destroy the bullet and damage the zombie */
 		for (size_t i = 0; i < g_zombies.size() && active; ++i)
 		{

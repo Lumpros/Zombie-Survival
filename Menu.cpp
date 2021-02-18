@@ -12,7 +12,8 @@ void PZS::Button::Update(void) noexcept
 
 	if (SDL_PointInRect(&mouse_pos, &button_rectangle)) 
 	{
-		DoShake();
+		if (should_shake)
+			DoShake();
 
 		SetCursor(LoadCursor(NULL, IDC_HAND));
 
@@ -140,6 +141,7 @@ void ThreadDoControlsTabMovement(SDL_Rect* rect, bool* show)
 
 PZS::Menu::Menu(void) noexcept
 	: play_button({ 0, 0, 456, 128 }, { 400 - 152, 400, 304, 85 }, 1.05f, true)
+	, sound_button({ 456, 0, 64, 64}, { 758, 758, 32, 32 }, 1.0f, false)
 	, controls_button({ 0, 128, 456, 128 }, { 400 - 152, 500, 304, 85 }, 1.05f, true)
 {
 	
@@ -155,6 +157,9 @@ void PZS::Menu::Render(void) noexcept
 
 	play_button.Render();
 	controls_button.Render();
+	sound_button.Render();
+
+	slider->Render();
 
 	if (show_controls) {
 
@@ -171,6 +176,9 @@ void PZS::Menu::Render(void) noexcept
 
 void PZS::Menu::Update(void) noexcept
 {
+	if (!menu_music->IsMusicPlaying())
+		menu_music->Play(-1);
+
 	SDL_Point mouse_pos;
 
 	bool clicked = SDL_GetMouseState(&mouse_pos.x, &mouse_pos.y) & SDL_BUTTON_LMASK;
@@ -179,12 +187,20 @@ void PZS::Menu::Update(void) noexcept
 	if (!show_controls) {
 		play_button.Update();
 		controls_button.Update();
+		sound_button.Update();
+
+		slider->Update();
 	}
 
 	if (play_button.IsClicked()) {
 		g_game_state = GameState::GS_LOAD_GAME_GRAPHICS;
 		menu_music->Stop();
 		button_click_sfx->Play();
+	}
+
+	if (sound_button.IsClicked()) {
+		show_slider = !show_slider;
+		slider->Enable(show_slider);
 	}
 
 	/* Move tab down when button is pressed */
@@ -218,6 +234,9 @@ void PZS::Menu::Init(void) noexcept
 
 	menu_music->Play(-1);
 
+	slider = new AudioSlider({ 758, 758 - 10 });
+
 	play_button.Init();
 	controls_button.Init();
+	sound_button.Init();
 }

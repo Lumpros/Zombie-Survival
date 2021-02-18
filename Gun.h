@@ -12,6 +12,9 @@ namespace PZS
 {
 	class Gun
 	{
+	private:
+		bool mouse_is_clicked : 1;
+
 	protected:
 		SFX* shoot_sfx;
 		SFX* reload_sfx;
@@ -33,10 +36,14 @@ namespace PZS
 		int ammo = 0;
 		int total_ammo = 0;
 
+		bool hold_to_shoot = false;
+
 		clock_t time_passed_milliseconds = 0;
 
 	public:
-		Gun(void) {}
+		Gun(void) { mouse_is_clicked = false; }
+
+		virtual void Reset(void) {};
 
 		void Update(int x, int y) noexcept;
 		void Render(void) noexcept;
@@ -57,25 +64,42 @@ namespace PZS
 	class Pistol : public Gun
 	{
 	public:
-		Pistol(void) {
+		Pistol(void) : Gun() 
+		{	
+			Reset();
+
+			shoot_sfx = Resources::GetInstance()->gSFX.Get("pistol_shot");
+			reload_sfx = Resources::GetInstance()->gSFX.Get("rifle_reload");
+		}
+
+		void Reset(void) override 
+		{
 			ammo_lim = 6;
 			ammo = 6;
 			total_ammo = 240;
 
 			bullets_shot = 1;
-			fire_rate_milliseconds = 200;
+			fire_rate_milliseconds = 150;
+
+			hold_to_shoot = false;
 
 			damage = 25;
-
-			shoot_sfx = Resources::GetInstance()->gSFX.Get("pistol_shot");
-			reload_sfx = Resources::GetInstance()->gSFX.Get("rifle_reload");
 		}
 	};
 
 	class Shotgun : public Gun
 	{
 	public:
-		Shotgun(void) {
+		Shotgun(void) : Gun() 
+		{
+			Reset();
+
+			shoot_sfx = Resources::GetInstance()->gSFX.Get("shotgun_shot");
+			reload_sfx = Resources::GetInstance()->gSFX.Get("shotgun_reload");
+		}
+
+		void Reset(void) override
+		{
 			ammo_lim = 2;
 			ammo = 2;
 			total_ammo = 0;
@@ -83,10 +107,9 @@ namespace PZS
 			fire_rate_milliseconds = 400;
 			damage = 100;
 
-			bullets_shot = 2;
+			hold_to_shoot = false;
 
-			shoot_sfx = Resources::GetInstance()->gSFX.Get("shotgun_shot");
-			reload_sfx = Resources::GetInstance()->gSFX.Get("shotgun_reload");
+			bullets_shot = 2;
 		}
 	};
 
@@ -101,7 +124,16 @@ namespace PZS
 	class Rifle : public Gun
 	{
 	public:
-		Rifle(void) {
+		Rifle(void) : Gun() 
+		{
+			Reset();
+
+			shoot_sfx = Resources::GetInstance()->gSFX.Get("pistol_shot");
+			reload_sfx = Resources::GetInstance()->gSFX.Get("rifle_reload");
+		}
+
+		void Reset(void) override
+		{
 			ammo_lim = 30;
 			ammo = AMMO;
 			total_ammo = 0;
@@ -109,10 +141,10 @@ namespace PZS
 			fire_rate_milliseconds = 100;
 			damage = DAMAGE;
 
+			hold_to_shoot = true;
+
 			bullets_shot = 1;
 
-			shoot_sfx = Resources::GetInstance()->gSFX.Get("pistol_shot");
-			reload_sfx = Resources::GetInstance()->gSFX.Get("rifle_reload");
 		}
 	};
 }

@@ -8,6 +8,11 @@ PZS::Drop::Drop(SDL_Rect rect) noexcept
 	end = clock();
 }
 
+void PZS::Drop::set_timer_for_pause(void)
+{
+	end = clock();
+}
+
 void PZS::Drop::Render(void) noexcept
 {
 	if (isVisible)

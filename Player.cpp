@@ -150,7 +150,7 @@ void PZS::Player::InitializeShotgunGraphics(Resources* resources) noexcept
 	// 4 x 5
 	for (int y = 0; y < 5; ++y)
 		for (int x = 0; x < 4; ++x)
-			reload_animation[SHOTGUN].AddFrame({ { x * 322 + c / 2, y * 217, 322 - c, 217 - c }, 50 });
+			reload_animation[SHOTGUN].AddFrame({ { x * 322 + c / 2, y * 217, 322 - c, 217 - c }, 35 });
 }
 
 #ifdef DIFF
@@ -335,6 +335,8 @@ void PZS::Player::HandleMeelee(void) noexcept
 	Vector2D mouse_position;
 	SDL_GetMouseState(&mouse_position.x, &mouse_position.y);
 
+	static bool stabbed = false;
+
 	/* Cast it to int because it may be reduced to -1 */
 	for (int i = 0; i < (int)g_zombies.size(); ++i)
 	{
@@ -348,7 +350,7 @@ void PZS::Player::HandleMeelee(void) noexcept
 			zombie_rect.w + dif
 		};
 
-		if (current_animation == &meelee_animation[gun_index] && current_animation->GetFrameIndex() == STAB_FRAME)	/////////////////////////
+		if (current_animation == &meelee_animation[gun_index] && current_animation->GetFrameIndex() == STAB_FRAME && !stabbed)
 		{
 			/* Calculate a point a certain distance away from the player to the direction he is facing */
 			/* If it lands in the zombie's hitbox, it has been stabbed, therefore it should be damaged*/
@@ -357,7 +359,7 @@ void PZS::Player::HandleMeelee(void) noexcept
 			std::pair<double, double> vel = Gun::CalculateObjectVelocity({
 				hitbox.x + hitbox.w / 2,
 				hitbox.y + hitbox.h / 2 },
-				mouse_position, 
+				mouse_position,
 				GetWidth() / 2
 				);
 
@@ -369,8 +371,10 @@ void PZS::Player::HandleMeelee(void) noexcept
 			SDL_Rect big_rect = { zombie_rect.x - 10, zombie_rect.y - 10, zombie_rect.w + 20, zombie_rect.h + 20 };
 
 			/* zombie may be removed here */
-			if (SDL_PointInRect(&hit, &big_rect))
+			if (SDL_PointInRect(&hit, &big_rect)) {
 				g_zombies[i]->Damage(meelee_damage);
+				stabbed = true;
+			}
 		}
 
 		/* If the final zombie is removed, break */
@@ -383,6 +387,8 @@ void PZS::Player::HandleMeelee(void) noexcept
 			g_zombies[i]->DoAttackAnimation();
 	}
 
+	if (current_animation == &meelee_animation[gun_index] && current_animation->GetFrameIndex() >= STAB_FRAME + 1)
+		stabbed = false;
 }
 
 void PZS::Player::Update(void) noexcept
@@ -413,11 +419,13 @@ void PZS::Player::Update(void) noexcept
 		}
 	}
 
-	for (size_t i = 0; i < g_barriers.size(); ++i)
-		HandleCollisionWithBarrier(g_barriers[i]->hitbox);
-
 	/* Check if player has stabbed a zombie */
 	HandleMeelee();
+
+	SDL_Point mouse;
+	SDL_GetMouseState(&mouse.x, &mouse.y);
+
+	rotation_angle = CalculateRotationAngle(mouse, { hitbox.x + hitboxes[gun_index].w / 2, hitbox.y + hitboxes[gun_index].h / 2 });
 
 	current_animation->Update(play_once);
 
@@ -451,8 +459,43 @@ void PZS::Player::Damage(int dmg) noexcept
 	if (health > 100)
 		health = 100;
 
-	if (health <= 0)
+	if (health <= 0) {
+		SDL_ShowCursor(1);
 		alive = false;
+		health = 0;
+	}
+}
+
+void PZS::Player::Reset(void) noexcept
+{
+	health = 100;
+	gun_index = GunIndex::PISTOL;
+
+	mTexture = still_sheet[PISTOL];
+	current_animation = &still_animation[PISTOL];
+
+	/* Initialize hitboxes accoording to size (guns differ) */
+	hitboxes[PISTOL] = { 300, 300, 64, 64 };
+	hitboxes[SHOTGUN] = { 300, 300, 80, 64 };
+	hitboxes[RIFLE] = { 300, 300, 80, 64 };
+
+	/* Default hitbox is the pistol */
+	hitbox = hitboxes[PISTOL];
+
+	for (int i = 0; i < (int)GunIndex::GUN_COUNT; ++i) {
+		guns[i]->Reset();
+		available_guns[i] = false;
+	}
+
+	available_guns[PISTOL] = true;
+
+	play_once = false;
+	play_blood = false;
+	play_heal = false;
+	has_hit_zombie = false;
+	has_reloaded = false;
+	alive = true;
+	health = 100;
 }
 
 bool PZS::Player::HandleCollisionWithZombie(SDL_Rect rect) noexcept
@@ -462,11 +505,6 @@ bool PZS::Player::HandleCollisionWithZombie(SDL_Rect rect) noexcept
 
 void PZS::Player::Render(void) noexcept
 {
-	SDL_Point mouse;
-	SDL_GetMouseState(&mouse.x, &mouse.y);
-
-	double angle = CalculateRotationAngle(mouse, { hitbox.x + hitboxes[gun_index].w / 2, hitbox.y + hitboxes[gun_index].h / 2 });
-	
 	guns[gun_index]->Render();
 
 	static constexpr int d = 96;
@@ -475,7 +513,8 @@ void PZS::Player::Render(void) noexcept
 		blood_sheet->Render({ hitbox.x - d / 2, hitbox.y - d / 2, hitboxes[gun_index].w + d,
 			hitboxes[gun_index].h + d }, blood_animation.GetCurrentFrame());
 
-	mTexture->Render(hitboxes[gun_index], current_animation->GetCurrentFrame(), angle);
+	if (alive)
+		mTexture->Render(hitboxes[gun_index], current_animation->GetCurrentFrame(), rotation_angle);
 
 	if (play_heal)
 		heal_sheet->Render(hitbox, heal_animation.GetCurrentFrame());

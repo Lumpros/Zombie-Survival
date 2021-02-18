@@ -51,6 +51,16 @@ void PZS::Application::Update(void) noexcept
 		game_menu.Update();
 		break;
 
+	case GameState::GS_START:
+		if (has_loaded_game_resources) {
+			Stage::Get()->RegisterAudioSlider(game_menu.slider);
+
+#ifndef DEBUG
+			Stage::Get()->Reset();
+#endif
+		}
+		break;
+
 	/* Load game graphics after initializing the window, so that */
 	/* It doesnt take 2 hours to open the first time lol */
 	case GameState::GS_LOAD_GAME_GRAPHICS:
@@ -148,6 +158,7 @@ void PZS::Application::LoadResources(void) const noexcept
 
 	resources->gSFX.Add("button_click", new SFX("Media/Audio/SFX/button_click.wav"));
 
+	resources->gTextures.Add("slider", new Texture("Media/Menu/slider.png"));
 	resources->gTextures.Add("menu_background", new Texture("Media/Menu/menu_background.png"));
 	resources->gTextures.Add("button_sheet", new Texture("Media/Menu/button_sheet.png"));
 	resources->gTextures.Add("controls", new Texture("Media/Menu/controls.png"));
@@ -190,14 +201,14 @@ bool NODISCARD PZS::Application::Initialize(void) noexcept
 	}
 
 	Mix_AllocateChannels(30);
-	Mix_Volume(-1, 64);
+	Mix_Volume(-1, MIX_MAX_VOLUME);
 
 	Logger("SDL Initialized!");
 
 	if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0"))
 		puts("Warning: Linear texture filtering not enabled!");
 
-	if (!(mWindow = SDL_CreateWindow("lyssa gia ti mavri lista", SDL_WINDOWPOS_CENTERED,
+	if (!(mWindow = SDL_CreateWindow("Zombie Survival", SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_HIDDEN)))
 	{
 		PRINT_SDL_ERROR("Failed to create SDL window");
@@ -263,7 +274,6 @@ void ThreadLoadGameResources(PZS::Resources* resources, bool* has_loaded)
 		return;
 
 	resources->gTextures.Add("debug", new Texture("Media/Sprites/Other/debug.png"));
-	resources->gTextures.Add("barrier", new Texture("Media/Sprites/Other/barrier.png"));
 
 	resources->gTextures.Add("zombie_walking_sheet", new Texture("Media/Sprites/Zombie/zombie_walking.png"));
 	resources->gTextures.Add("zombie_attack_sheet", new Texture("Media/Sprites/Zombie/zombie_attack.png"));

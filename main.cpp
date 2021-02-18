@@ -1,10 +1,6 @@
 #include "Application.h"
 
-#ifdef main
-	#undef main
-#endif
-
-int main(void)
+int main(int argc, char* argv[])
 {
 	PZS::Application app;
 	
