@@ -302,6 +302,9 @@ void ThreadLoadGameResources(PZS::Resources* resources, bool* has_loaded)
 	resources->gTextures.Add("rifle_ammo", new Texture("Media/Sprites/Drops/rifle_ammo.png"));
 	resources->gTextures.Add("pistol", new Texture("Media/Sprites/Other/pistol.png"));
 	resources->gTextures.Add("pistol_ammo", new Texture("Media/Sprites/Drops/pistol_ammo.png"));
+	resources->gTextures.Add("instakill", new Texture("Media/Sprites/Drops/instakill.png"));
+	resources->gTextures.Add("rapid_fire", new Texture("Media/Sprites/Drops/rapid_fire.png"));
+	resources->gTextures.Add("infinite", new Texture("Media/Sprites/Drops/infinite.png"));
 
 	resources->gTextures.Add("medkit", new Texture("Media/Sprites/Drops/medkit.png"));
 	resources->gTextures.Add("target", new Texture("Media/Sprites/Other/target.png"));

@@ -27,9 +27,13 @@ namespace PZS
 		void UpdateIndividualBullet(void) noexcept;
 
 		clock_t fire_start  = 0;
+		clock_t instakill_begin = 0, rapid_fire_begin = 0,
+			infinite_begin = 0;
 
 		int damage = 0;
+		int const_damage = 0;
 		int fire_rate_milliseconds = 0;
+		int fire_rate_const = 0;
 		int bullets_shot = 1;
 
 		int ammo_lim = 0;
@@ -37,6 +41,7 @@ namespace PZS
 		int total_ammo = 0;
 
 		bool hold_to_shoot = false;
+		bool do_ammo_reduction = true;
 
 		clock_t time_passed_milliseconds = 0;
 
@@ -52,6 +57,21 @@ namespace PZS
 		void AddAmmoFromBox(int times) noexcept;
 
 		bool MagIsFull(void) const noexcept { return ammo == ammo_lim; }
+
+		void SetNormalDamage(void) { damage = const_damage; }
+		void SetInstaKill(void) { damage = 200; instakill_begin = clock(); }
+
+		void SetRapidFire(void) noexcept;
+		void DisableAmmoReduction(void) noexcept;
+
+		void SetProperPauseClock(void) noexcept
+		{
+			clock_t time = clock();
+
+			instakill_begin = time;
+			rapid_fire_begin = time;
+			infinite_begin = time;
+		}
 
 		int GetShotRate(void) const noexcept { return fire_rate_milliseconds; }
 		int GetTotalAmmo(void) const noexcept { return total_ammo; }
@@ -79,11 +99,13 @@ namespace PZS
 			total_ammo = 240;
 
 			bullets_shot = 1;
-			fire_rate_milliseconds = 150;
+			fire_rate_milliseconds = fire_rate_const = 150;
 
+			do_ammo_reduction = true;
 			hold_to_shoot = false;
 
 			damage = 25;
+			const_damage = 25;
 		}
 	};
 
@@ -104,9 +126,11 @@ namespace PZS
 			ammo = 2;
 			total_ammo = 0;
 
-			fire_rate_milliseconds = 400;
+			fire_rate_milliseconds = fire_rate_const = 400;
 			damage = 100;
+			const_damage = 100;
 
+			do_ammo_reduction = true;
 			hold_to_shoot = false;
 
 			bullets_shot = 2;
@@ -114,7 +138,7 @@ namespace PZS
 	};
 
 #ifdef DEBUG
-#define DAMAGE 200
+#define DAMAGE 34
 #define AMMO 99999
 #else
 #define DAMAGE 34
@@ -138,7 +162,10 @@ namespace PZS
 			ammo = AMMO;
 			total_ammo = 0;
 
-			fire_rate_milliseconds = 100;
+			do_ammo_reduction = true;
+			const_damage = DAMAGE;
+
+			fire_rate_milliseconds = fire_rate_const = 100;
 			damage = DAMAGE;
 
 			hold_to_shoot = true;

@@ -52,8 +52,10 @@ namespace PZS
 
         int health = 100;
 
-        // This is inconsistent because it can stab a zombie multiple times per frame but im too lazy to fix it lol
+        clock_t meelee_begin = 0;
         int meelee_damage = 50; 
+        const int meelee_const = 50;
+
         int movement_speed = 3;
 
         double rotation_angle = 0.0f;
@@ -95,6 +97,15 @@ namespace PZS
 
         void DoShootingAnimation(void) noexcept;
         void DoReloadAnimation(void) noexcept;
+
+        void DoInstaKill(void) { 
+            meelee_damage = 200; 
+            meelee_begin = clock();
+        }
+
+        void SetProperPauseClock(void) {
+            meelee_begin = clock();
+        }
 
         int NODISCARD GetHP(void) const noexcept { return health; }
 

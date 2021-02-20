@@ -10,6 +10,7 @@ void ThreadCallSpawnZombie(int wave, volatile bool* is_paused)
 	std::this_thread::sleep_for(std::chrono::seconds(3));
 
 	PZS::Stage* stage_ptr = PZS::Stage::Get();
+	PZS::Player* player_ptr = PZS::Player::Get();
 
 	int count = stage_ptr->GetZombieLimit();
 
@@ -17,7 +18,7 @@ void ThreadCallSpawnZombie(int wave, volatile bool* is_paused)
 	if (wave > 16)
 		delay = 800;
 
-	while (count-- > 0) {
+	while (count-- > 0 && player_ptr->GetHP() > 0) {
 		stage_ptr->SpawnZombie();
 
 		while (*is_paused);
@@ -155,7 +156,7 @@ void PZS::Stage::UpdateGameplayRelated(void) noexcept
 
 	const Uint8* keyboard_state = SDL_GetKeyboardState(NULL);
 
-	if (keyboard_state[SDL_SCANCODE_P] && !p_is_pressed) 
+	if ((keyboard_state[SDL_SCANCODE_P] || keyboard_state[SDL_SCANCODE_ESCAPE]) && !p_is_pressed)
 	{
 		p_is_pressed = true;
 		is_paused = !is_paused;
@@ -164,9 +165,14 @@ void PZS::Stage::UpdateGameplayRelated(void) noexcept
 
 		for (size_t i = 0; i < g_drops.size(); ++i)
 			g_drops[i]->set_timer_for_pause();
+
+		for (int i = 0; i < GunIndex::GUN_COUNT; ++i)
+			Player::Get()->GetGun((GunIndex)i)->SetProperPauseClock();
+
+		Player::Get()->SetProperPauseClock();
 	}
 
-	else if (!keyboard_state[SDL_SCANCODE_P])
+	else if (!keyboard_state[SDL_SCANCODE_P] && !keyboard_state[SDL_SCANCODE_ESCAPE])
 		p_is_pressed = false;
 
 	if (!is_paused)

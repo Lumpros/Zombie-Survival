@@ -73,6 +73,9 @@ void PZS::AudioSlider::Update(void) noexcept
 			else if (new_volume < 0) 
 				new_volume = 0;
 
+			/* For the sfx that will be added later */
+			Mix_Volume(-1, new_volume);
+
 			Mix_VolumeMusic(new_volume);
 			Resources::GetInstance()->SetMixChunkVolume(new_volume);
 

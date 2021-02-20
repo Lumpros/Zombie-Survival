@@ -87,7 +87,7 @@ void PZS::Player::InitializeRifleGraphics(Resources* resources) noexcept
 	// 312 x 206
 	// 3 x 1
 	for (int x = 0; x < 3; ++x)
-		shooting_animation[RIFLE].AddFrame({ { x * 312, 0, 312, 206 }, guns[RIFLE]->GetShotRate() / 3 });
+		shooting_animation[RIFLE].AddFrame({ { x * 312, 0, 312, 206 }, 10 });
 
 	constexpr int c = 10;
 
@@ -332,6 +332,10 @@ void PZS::Player::HandleAnimation(SDL_Rect old_pos) noexcept
 
 void PZS::Player::HandleMeelee(void) noexcept 
 {
+	if (meelee_damage != meelee_const)
+		if (clock() - meelee_begin >= 10000)
+			meelee_damage = meelee_const;
+
 	Vector2D mouse_position;
 	SDL_GetMouseState(&mouse_position.x, &mouse_position.y);
 
@@ -485,8 +489,14 @@ void PZS::Player::Reset(void) noexcept
 	for (int i = 0; i < (int)GunIndex::GUN_COUNT; ++i) {
 		guns[i]->Reset();
 		available_guns[i] = false;
+
+		walk_animation[i].Reset();
+		still_animation[i].Reset();
+		shooting_animation[i].Reset();
+		reload_animation[i].Reset();
 	}
 
+	meelee_animation[PISTOL].Reset();
 	available_guns[PISTOL] = true;
 
 	play_once = false;
@@ -496,6 +506,12 @@ void PZS::Player::Reset(void) noexcept
 	has_reloaded = false;
 	alive = true;
 	health = 100;
+
+	blood_animation.Reset();
+	blood_animation.Pause(true);
+
+	heal_animation.Reset();
+	heal_animation.Pause(true);
 }
 
 bool PZS::Player::HandleCollisionWithZombie(SDL_Rect rect) noexcept

@@ -15,6 +15,12 @@ unsigned int PZS::Animation::GetFrameIndex(void) const
 	return current_index;
 }
 
+void PZS::Animation::SetAllFrameDelay(int new_delay)
+{
+	for (size_t i = 0; i < frames.size(); ++i)
+		frames[i].duration_milliseconds = new_delay;
+}
+
 void PZS::Animation::Reset(void)
 {
 	current_index = 0;

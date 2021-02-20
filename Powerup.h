@@ -31,7 +31,7 @@ namespace PZS
 		}
 
 	public:
-		PistolAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 32 }) {
+		PistolAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 24 }) {
 			mTexture = Resources::GetInstance()->gTextures.Get("pistol_ammo");
 			pickup_sfx = Resources::GetInstance()->gSFX.Get("ammo_pickup");
 		}
@@ -46,7 +46,7 @@ namespace PZS
 		}
 
 	public:
-		ShotgunAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 32 }) {
+		ShotgunAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 24 }) {
 			mTexture = Resources::GetInstance()->gTextures.Get("shotgun_ammo");
 			pickup_sfx = Resources::GetInstance()->gSFX.Get("ammo_pickup");
 		}
@@ -61,8 +61,8 @@ namespace PZS
 			pickup_sfx->Play();
 		}
 
-	public:
-		RifleAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 32 }) {
+	public: 
+		RifleAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 24 }) {
 			mTexture = Resources::GetInstance()->gTextures.Get("rifle_ammo");
 			pickup_sfx = Resources::GetInstance()->gSFX.Get("ammo_pickup");
 		}
@@ -81,6 +81,50 @@ namespace PZS
 		Nuke(SDL_Rect rect) : Drop({ rect.x, rect.y, 64, 64 }) {
 			mTexture = Resources::GetInstance()->gTextures.Get("nuke");
 			pickup_sfx = Resources::GetInstance()->gSFX.Get("explosion");
+		}
+	};
+
+	class Instakill : public Drop
+	{
+	protected:
+		void ExecuteDropEffect(void) noexcept {
+			for (int i = 0; i < (int)GunIndex::GUN_COUNT; ++i)
+				Player::Get()->GetGun((GunIndex)i)->SetInstaKill();
+			Player::Get()->DoInstaKill();
+		}
+
+	public:
+		Instakill(SDL_Rect rect) : Drop({ rect.x, rect.y, 64, 64 }) {
+			mTexture = Resources::GetInstance()->gTextures.Get("instakill");
+		}
+	};
+
+	class RapidFire : public Drop
+	{
+	protected:
+		void ExecuteDropEffect(void) noexcept {
+			for (int i = 0; i < (int)GunIndex::GUN_COUNT; ++i)
+				Player::Get()->GetGun((GunIndex)i)->SetRapidFire();
+		}
+
+	public:
+		RapidFire(SDL_Rect rect) : Drop({ rect.x, rect.y, 32, 32 }) {
+			mTexture = Resources::GetInstance()->gTextures.Get("rapid_fire");
+			pickup_sfx = Resources::GetInstance()->gSFX.Get("ammo_pickup");
+		}
+	};
+
+	class InfiniteAmmo : public Drop
+	{
+	protected:
+		void ExecuteDropEffect(void) noexcept {
+			for (int i = 0; i < (int)GunIndex::GUN_COUNT; ++i)
+				Player::Get()->GetGun((GunIndex)i)->DisableAmmoReduction();
+		}
+
+	public:
+		InfiniteAmmo(SDL_Rect rect) : Drop({ rect.x, rect.y, 64, 32 }) {
+			mTexture = Resources::GetInstance()->gTextures.Get("infinite");
 		}
 	};
 }

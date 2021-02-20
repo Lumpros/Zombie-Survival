@@ -32,6 +32,7 @@ namespace PZS
 		SDL_Rect* GetCurrentFrame(void);
 		unsigned int GetFrameIndex(void) const;
 
+		void SetAllFrameDelay(int new_delay);
 		void Reset(void);
 		void Update(bool playOnce = false);
 		void Pause(bool Pause);

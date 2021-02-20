@@ -45,7 +45,8 @@ void PZS::Gun::Shoot(Vector2D player_pos, Vector2D mouse_pos) noexcept
 
 	shoot_sfx->Play();
 
-	ammo -= bullets_shot;
+	if (do_ammo_reduction)
+		ammo -= bullets_shot;
 
 	Player::Get()->DoShootingAnimation();
 }
@@ -94,11 +95,40 @@ void PZS::Gun::Update(int x, int y) noexcept
 
 	UpdateIndividualBullet();
 
+	clock_t clck = clock();
+
 	/* Checks if it should reload and the shooting animation is done */
 	if (ammo <= 0 && !player->IsPlayOnce())
 		Player::Get()->DoReloadAnimation();
+	
+	/* Insta kill*/
+	if (damage != const_damage)
+		if (clck - instakill_begin >= 10000)
+			SetNormalDamage();
 
-	fire_start = clock();
+	/* Rapid fire*/
+	if (fire_rate_const != fire_rate_milliseconds)
+		if (clck - rapid_fire_begin >= 10000) {
+			fire_rate_milliseconds = fire_rate_const;
+		}
+
+	if (!do_ammo_reduction)
+		if (clck - infinite_begin >= 10000)
+			do_ammo_reduction = true;
+
+	fire_start = clck;
+}
+
+void PZS::Gun::DisableAmmoReduction(void) noexcept
+{
+	do_ammo_reduction = false;
+	infinite_begin = clock();
+}
+
+void PZS::Gun::SetRapidFire(void) noexcept
+{
+	fire_rate_milliseconds = fire_rate_const / 3;
+	rapid_fire_begin = clock();
 }
 
 void PZS::Gun::AddAmmoFromBox(int times) noexcept 

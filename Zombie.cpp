@@ -146,7 +146,8 @@ enum class Powerup {
 	BEGIN, // for rng
 	MEDKIT, PISTOL_AMMO,
 	RIFLE_AMMO, SHOTGUN_AMMO,
-	NUKE,
+	NUKE, INSTAKILL,
+	RAPID_FIRE, INFINITE,
 	TOTAL_COUNT // for rng
 };
 
@@ -174,6 +175,18 @@ void PZS::Zombie::ChoosePowerup(void) noexcept
 		case Powerup::NUKE:
 			add_drop<Nuke>(hitbox);
 			break;
+
+		case Powerup::INSTAKILL:
+			add_drop<Instakill>(hitbox);
+			break;
+
+		case Powerup::RAPID_FIRE:
+			add_drop<RapidFire>(hitbox);
+			break;
+
+		case Powerup::INFINITE:
+			add_drop<InfiniteAmmo>(hitbox);
+			break;
 	}
 }
 
@@ -189,9 +202,7 @@ void PZS::Zombie::Damage(int dmg) noexcept
 	// try Drop gun
 	if (hp <= 0)
 	{
-		/* 1 in 20 the first time */
-		/* 1 in 40 the second time */
-		if (RNG::RandInt(1, 20) == RNG::RandInt(1, 20))
+		if (RNG::RandInt(1, 16) == RNG::RandInt(1, 16))
 			ChooseGunDrop();
 
 		else if (RNG::RandInt(1, 5) == RNG::RandInt(1, 5)) // 20%
